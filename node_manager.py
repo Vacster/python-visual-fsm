@@ -126,6 +126,8 @@ class Node_Manager:
     def change_state(self, graph_state):
         if graph_state == Graph_State.DFA:
             graph_state = Graph_State.NFA
+        elif graph_state == Graph_State.NFA:
+            graph_state = Graph_State.PDA
         else:
             graph_state = Graph_State.DFA
         event.post(

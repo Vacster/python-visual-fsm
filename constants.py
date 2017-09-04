@@ -13,7 +13,7 @@ class Custom_Event:
 
 class Graph_State:
     NFA     =   "NFA"
-    NFAE    =   "NFA-ε"
+    PDA     =   "PDA"
     DFA     =   "DFA"
 
 class Color:
@@ -30,6 +30,7 @@ class Token:
     OR      =   "+"
     KLEENE  =   "*"
     EPSILON =   "*"
+    STACK   =   '$'
 
 class Pivot:
     CENTER = 0.5

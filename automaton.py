@@ -1,4 +1,4 @@
-import regex
+import regex, PDA
 from pygame import event
 from functools import reduce
 from constants import Graph_State, Token, Custom_Event
@@ -16,16 +16,22 @@ class DFA:
         return self.deltaHat(self.q0, inputString) in self.F
     def states(self):
         l = [self.q0]
-        for x in self.deep_check(self.q0, "val"):
+        for x in self.deep_check(self.q0, "val", []):
             if x not in l and x is not None:
                 l.append(x)
         return l
-    def deep_check(self, name, looking):
+    def deep_check(self, name, looking, done=None):
         try:
             for key, val in self.delta[name].items():
                 if val != name:
-                    for x in self.deep_check(val, looking):
-                        yield x
+                    if done is not None:
+                        if val not in done:
+                            done.append(val)
+                            for x in self.deep_check(val, looking, done):
+                                yield x
+                    else:
+                        for x in self.deep_check(val, looking):
+                            yield x
                 yield val if looking == "val" else key
         except:
             pass
@@ -150,6 +156,23 @@ def get_finals(circles):
                     list(
                         filter(lambda node: node.is_final(), circles))))
 
+def get_pda_transititions(circles):
+    transitions = []
+    for circle in circles:
+        for line in circle.lines:
+            for text in line.text.split("|"):
+                if text == Token.EPSILON:
+                    transitions.append(PDA.Transition(line.circle_a.text, line.circle_b.text, None, None, None))
+                else:
+                    message = text.split("/")
+                    left_side = message[0].split(";")
+                    condition = None if left_side[0] == Token.EPSILON else left_side[0]
+                    stack = None if left_side[1] == Token.EPSILON else left_side[1]
+                    right_side = None if message[1] == Token.EPSILON else message[1].split(",")
+                    transitions.append(PDA.Transition(line.circle_a.text, line.circle_b.text, condition, stack, right_side))
+    return transitions
+
+
 def run(state, message, circles, starting):
     states = get_events(state, circles)
     finals = get_finals(circles)
@@ -157,11 +180,14 @@ def run(state, message, circles, starting):
     try:
         if state == Graph_State.DFA:
             result = str(DFA(states, starting, finals).inLanguage(message))
-        else:
+        elif state == Graph_State.NFA:
             result = str(NFA(states, starting, finals).inLanguage(message))
+        elif state == Graph_State.PDA:
+            pda = PDA.PDA([x.text for x in circles], get_pda_transititions(circles), finals, starting)
+            result = str(pda.solve(message))
     except Exception as e:
         print(e)
-        result = str(False)
+        result = "False"
     event.post(
         event.Event(Custom_Event.UPDATE_TEMP_MESSAGE,
         message=result)
@@ -184,13 +210,15 @@ def cross_product(start1, start2, circles, accept_method, circles2=None):
         finals2 = get_finals(circles2)
         D2 = DFA(states2, start2, finals2)
 
-    alphabet = D1.alphabet()
-    alphabet.extend(D2.alphabet())
-    alphabet = list(set(alphabet))
+    alphabet = ['0', '1']
+    #
+    # alphabet = D1.alphabet()
+    #
+    # alphabet.extend(D2.alphabet())
+    # alphabet = list(set(alphabet))
 
-    print(D1.states())
-    print(D2.states())
     transitions = {}
+    print(D1.states())
     for state1 in D1.states():
         for state2 in D2.states():
             transitions[state1+","+state2] = {}
@@ -228,15 +256,15 @@ def cross_product(start1, start2, circles, accept_method, circles2=None):
         if accept_method(a1, a2):
             accepts.append(x)
 
-    reachable = [start]
-    reachable.extend(get_reachables(states, start))
-    reachable = list(set(reachable))
-    keys = []
-    for key, val in states.items():
-        if key not in reachable:
-            keys.append(key)
-    for key in keys:
-        del states[key]
+    # reachable = [start]
+    # reachable.extend(get_reachables(states, start))
+    # reachable = list(set(reachable))
+    # keys = []
+    # for key, val in states.items():
+    #     if key not in reachable:
+    #         keys.append(key)
+    # for key in keys:
+    #     del states[key]]
     return states, start, accepts
 
 #This function is stupidly buggy
@@ -251,6 +279,7 @@ def get_reachables(states, name, dones=[]):
     except:
         pass
 
+#Buggy
 def get_alphabet(states, name):
     try:
         for key, val in states[name].items():
@@ -266,8 +295,8 @@ def complement(circles, starting):
     finals = get_finals(circles)
     #Gotta turn it around for algorithm
 
-    alphabet = list(set(get_alphabet(states, starting)))
-
+    # alphabet = list(set(get_alphabet(states, starting)))
+    alphabet = ['1', '0']
     hole_created = False
     #Hole
     for key, val in states.items():
