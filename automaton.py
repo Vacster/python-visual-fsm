@@ -169,11 +169,30 @@ def get_pda_transititions(circles):
                     condition = None if left_side[0] == Token.EPSILON else left_side[0]
                     stack = None if left_side[1] == Token.EPSILON else left_side[1]
                     right_side = None if message[1] == Token.EPSILON else message[1].split(",")
+
                     transitions.append(PDA.Transition(line.circle_a.text, line.circle_b.text, condition, stack, right_side))
     return transitions
 
+def glc_to_pda(file_name):
+    pda = PDA.pda_from_file(file_name)
+    transitions = []
+    for t in pda:
+        tmp_string = ""
+        tmp_string += (t.condition if t.condition is not None else Token.EPSILON)+";"
+        tmp_string += (t.stack if t.stack is not None else Token.EPSILON)+"/"
+        first = False
+        if t.push is not None:
+            for x in t.push:
+                if first:
+                    tmp_string += ","
+                tmp_string += x
+                first = True
+        else:
+            tmp_string += Token.EPSILON
+        transitions.append(tmp_string)
+    return transitions
 
-def run(state, message, circles, starting):
+def run(state, message, circles, starting, extra=None):
     states = get_events(state, circles)
     finals = get_finals(circles)
     result = None
@@ -185,6 +204,9 @@ def run(state, message, circles, starting):
         elif state == Graph_State.PDA:
             pda = PDA.PDA([x.text for x in circles], get_pda_transititions(circles), finals, starting)
             result = str(pda.solve(message))
+        elif state == Graph_State.PDA_E:
+            pda = PDA.PDA([x.text for x in circles], get_pda_transititions(circles), finals, starting)
+            result = str(pda.solve(message, stack=PDA.Stack(extra), empty=True))
     except Exception as e:
         print(e)
         result = "False"

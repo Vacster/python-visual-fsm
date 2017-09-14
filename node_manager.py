@@ -128,6 +128,8 @@ class Node_Manager:
             graph_state = Graph_State.NFA
         elif graph_state == Graph_State.NFA:
             graph_state = Graph_State.PDA
+        elif graph_state == Graph_State.PDA:
+            graph_state = Graph_State.PDA_E
         else:
             graph_state = Graph_State.DFA
         event.post(
@@ -231,6 +233,13 @@ class Node_Manager:
                 )
                 pyperclip.copy(result)
                 return True
+            elif "glc" in message[0]:
+                result = automaton.glc_to_pda(message[1])
+                self.change_state(Graph_State.PDA)
+                circle = self.add_node("q")
+                for x in result:
+                    circle.add_line(circle, x)
+                return True
             else:
                 if self.selected is None:
                     event.post(
@@ -238,8 +247,18 @@ class Node_Manager:
                         message="Starting node must be selected.")
                     )
                 else:
-                    automaton.run(graph_state, message[0],
-                    self.circles, self.selected.text)
+                    if graph_state == Graph_State.PDA_E:
+                        try:
+                            automaton.run(graph_state, message[0],
+                            self.circles, self.selected.text, extra=message[1])
+                        except:
+                            event.post(
+                                event.Event(Custom_Event.UPDATE_TEMP_MESSAGE,
+                                message="Starting Condition not written")
+                            )
+                    else:
+                        automaton.run(graph_state, message[0],
+                        self.circles, self.selected.text)
                     return False
 
     #Save and load should be in another class

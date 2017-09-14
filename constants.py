@@ -14,6 +14,7 @@ class Custom_Event:
 class Graph_State:
     NFA     =   "NFA"
     PDA     =   "PDA"
+    PDA_E   =   "PDA-EMPTY"
     DFA     =   "DFA"
 
 class Color:
